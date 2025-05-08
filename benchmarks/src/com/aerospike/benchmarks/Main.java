@@ -66,10 +66,11 @@ import com.aerospike.client.policy.WritePolicy;
 import com.aerospike.client.util.Util;
 
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.EpollEventLoopGroup;
-import io.netty.channel.kqueue.KQueueEventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.incubator.channel.uring.IOUringEventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.epoll.EpollIoHandler;
+import io.netty.channel.kqueue.KQueueIoHandler;
+import io.netty.channel.nio.NioIoHandler;
+import io.netty.channel.uring.IoUringIoHandler;
 
 public class Main implements Log.Callback {
 
@@ -1176,25 +1177,25 @@ public class Main implements Log.Callback {
 				}
 
 				case NETTY_NIO: {
-					EventLoopGroup group = new NioEventLoopGroup(this.eventLoopSize);
+					EventLoopGroup group = new MultiThreadIoEventLoopGroup(this.eventLoopSize, NioIoHandler.newFactory());
 					eventLoops = new NettyEventLoops(eventPolicy, group, this.eventLoopType);
 					break;
 				}
 
 				case NETTY_EPOLL: {
-					EventLoopGroup group = new EpollEventLoopGroup(this.eventLoopSize);
+					EventLoopGroup group = new MultiThreadIoEventLoopGroup(this.eventLoopSize, EpollIoHandler.newFactory());
 					eventLoops = new NettyEventLoops(eventPolicy, group, this.eventLoopType);
 					break;
 				}
 
 				case NETTY_KQUEUE: {
-					EventLoopGroup group = new KQueueEventLoopGroup(this.eventLoopSize);
+					EventLoopGroup group = new MultiThreadIoEventLoopGroup(this.eventLoopSize, KQueueIoHandler.newFactory());
 					eventLoops = new NettyEventLoops(eventPolicy, group, this.eventLoopType);
 					break;
 				}
 
 				case NETTY_IOURING: {
-					EventLoopGroup group = new IOUringEventLoopGroup(this.eventLoopSize);
+					EventLoopGroup group = new MultiThreadIoEventLoopGroup(this.eventLoopSize, IoUringIoHandler.newFactory());
 					eventLoops = new NettyEventLoops(eventPolicy, group, this.eventLoopType);
 					break;
 				}

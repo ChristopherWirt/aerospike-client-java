@@ -24,15 +24,17 @@ import java.util.Map;
 import com.aerospike.client.AerospikeException;
 
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.EpollEventLoopGroup;
+import io.netty.channel.IoEventLoopGroup;
+import io.netty.channel.epoll.EpollIoHandler;
 import io.netty.channel.epoll.EpollSocketChannel;
-import io.netty.channel.kqueue.KQueueEventLoopGroup;
+import io.netty.channel.kqueue.KQueueIoHandler;
 import io.netty.channel.kqueue.KQueueSocketChannel;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.local.LocalIoHandler;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.incubator.channel.uring.IOUringEventLoopGroup;
-import io.netty.incubator.channel.uring.IOUringSocketChannel;
+import io.netty.channel.uring.IoUringIoHandler;
+import io.netty.channel.uring.IoUringSocketChannel;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
@@ -99,41 +101,21 @@ public final class NettyEventLoops implements EventLoops {
 	}
 
 	private static EventLoopType getEventLoopType(EventLoopGroup group) {
-		// Wrap each instanceof comparison in a try/catch block because these classes reference
-		// libraries that are optional and might not be specified in the build file (pom.xml).
-		// This is preferable to using a "getClass().getSimpleName()" switch statement because
-		// that requires exact classname equality and does not handle custom classes that might
-		// inherit from these classes.
 		try {
-			if (group instanceof NioEventLoopGroup) {
-				return EventLoopType.NETTY_NIO;
+			if (group instanceof IoEventLoopGroup g) {
+				if (g.isIoType(EpollIoHandler.class)) {
+					return EventLoopType.NETTY_EPOLL;
+				} else if (g.isIoType(KQueueIoHandler.class)) {
+					return EventLoopType.NETTY_KQUEUE;
+				} else if (g.isIoType(IoUringIoHandler.class)) {
+					return EventLoopType.NETTY_IOURING;
+				} else if (g.isIoType(NioIoHandler.class)) {
+					return EventLoopType.NETTY_NIO;
+				} else if (g.isIoType(LocalIoHandler.class)) {
+					return EventLoopType.DIRECT_NIO;
+				}
 			}
-		}
-		catch (NoClassDefFoundError e) {
-		}
-
-		try {
-			if (group instanceof EpollEventLoopGroup) {
-				return EventLoopType.NETTY_EPOLL;
-			}
-		}
-		catch (NoClassDefFoundError e) {
-		}
-
-		try {
-			if (group instanceof KQueueEventLoopGroup) {
-				return EventLoopType.NETTY_KQUEUE;
-			}
-		}
-		catch (NoClassDefFoundError e) {
-		}
-
-		try {
-			if (group instanceof IOUringEventLoopGroup) {
-				return EventLoopType.NETTY_IOURING;
-			}
-		}
-		catch (NoClassDefFoundError e) {
+		}catch (NoClassDefFoundError e) {
 		}
 
 		throw new AerospikeException("Unexpected EventLoopGroup");
@@ -155,7 +137,7 @@ public final class NettyEventLoops implements EventLoops {
 			return KQueueSocketChannel.class;
 
 		case NETTY_IOURING:
-			return IOUringSocketChannel.class;
+			return IoUringSocketChannel.class;
 		}
 	}
 
